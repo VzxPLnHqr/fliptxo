@@ -1,0 +1,14 @@
+target
+.bsp/
+.idea/
+out/
+debug.log
+.metals/
+.bloop/
+project/metals.sbt
+project/project
+data/
+node_modules
+yarn*
+package*.json
+.vscode/
