@@ -1,6 +1,10 @@
 package fliptxo
 import cats.effect.*
+import std.Console
 
-trait FliptxoApp {
-  val run = IO.println("hello world")
+trait FliptxoApp[F[_]] {
+
+  val console: Console[F]
+
+  val run = console.println("hello")
 }
