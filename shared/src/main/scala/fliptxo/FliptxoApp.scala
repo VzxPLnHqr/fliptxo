@@ -1,10 +1,15 @@
 package fliptxo
-import cats.effect.*
-import std.Console
 
-trait FliptxoApp[F[_]] {
+import cats.MonadThrow
+import cats.syntax.all.*
 
-  val console: Console[F]
+class FliptxoApp[F[_] : MonadThrow](console: SimpleConsole[F]) {
+  
+  def run: F[Unit] = console.println("name?") 
+              >> console.readLine
+              .flatTap(m => console.println(s"hello $m"))
+              .map(m => scoin.Crypto.sha256(scodec.bits.ByteVector(m.getBytes)))
+              .flatTap(h => console.println(s"the hash of your name is ${h.toHex}"))
+              .as(())
 
-  val run = console.println("hello")
 }
