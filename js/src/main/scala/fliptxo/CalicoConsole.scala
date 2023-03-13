@@ -47,8 +47,8 @@ object CalicoConsole {
             def readLine: IO[String] =
                 disableIn.set(false) 
                   >> submitted.waitUntil(_ == true) 
-                    >> in.getAndSet("").flatTap(_ => disableIn.set(true) 
-                      >> submitted.set(false))
+                    >> in.getAndSet("")
+                      .flatTap(_ => disableIn.set(true) >> submitted.set(false))
           }
         }.flatMap(c => IO(in,out,disableIn,submitted,c)).toResource
     }
@@ -60,8 +60,21 @@ object CalicoConsole {
             div(out.map(xs => ul(xs.map(x => li(pre(x)))))),
             input.withSelf{ self =>
               (
-                placeholder <-- disableIn.map{ case true => ""; case false => "type here and press enter"},
-                onKeyUp --> (_.filter(_.key == KeyValue.Enter).foreach(v => self.value.get.flatMap(in.set) >> submitted.set(true))),
+                placeholder <-- disableIn.map{ 
+                                    case true => ""
+                                    case false => "type here and press enter"
+                                  },
+                onKeyUp --> (_.foreach
+                                (v => 
+                                  self.value.get.flatMap(in.set) 
+                                    >> (
+                                        if(v.key == KeyValue.Enter) 
+                                          submitted.set(true) 
+                                        else 
+                                          IO.unit
+                                      )
+                                )
+                            ),
                 disabled <-- disableIn,
                 value <-- in
               )
