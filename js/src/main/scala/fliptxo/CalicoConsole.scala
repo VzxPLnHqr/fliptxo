@@ -38,20 +38,23 @@ object CalicoConsole {
     val inputDisabledIO = SignallingRef[IO].of(true).toResource
     val submittedIO = SignallingRef[IO].of(false).toResource
     val stdIO = (stdIn,stdOut,inputDisabledIO,submittedIO).tupled
-    val stdIOwithConsole = (stdIn,stdOut,inputDisabledIO,submittedIO).tupled
+
+    val console = IO{ new SimpleConsole[IO] {
+          def println(msg: String): IO[Unit] = stdOut.use(out => out.update(_.appended(msg)))
+
+          def readLine: IO[String] = stdIO.use {
+            case(in,out,disableIn,submitted) => 
+              disableIn.set(false) 
+                >> submitted.waitUntil(_ == true) 
+                  >> in.getAndSet("").flatTap(_ => disableIn.set(true) 
+                    >> submitted.set(false))
+          }
+        }
+    }
 
     def mkResource(app: SimpleConsole[IO] => IO[Unit]): Resource[IO, HtmlElement[IO]] = stdIO.flatMap { 
       case (in,out, disableIn, submitted) =>
-        val simpcons = new SimpleConsole[IO] {
-          def println(msg: String): IO[Unit] = out.update(_.appended(msg))
-
-          def readLine: IO[String] = disableIn.set(false) 
-              >> submitted.waitUntil(_ == true) 
-                >> in.getAndSet("").flatTap(_ => disableIn.set(true) 
-                  >> submitted.set(false))
-        }
-
-        app(simpcons).background.flatMap{ _ => 
+        console.flatMap(app(_)).background.flatMap{ _ => 
           div(
             div(out.map(xs => ul(xs.map(x => li(pre(x)))))),
             input.withSelf{ self =>
