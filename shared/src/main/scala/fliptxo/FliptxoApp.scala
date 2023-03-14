@@ -3,7 +3,7 @@ package fliptxo
 import cats.MonadThrow
 import cats.syntax.all.*
 
-class FliptxoApp[F[_] : MonadThrow](console: SimpleConsole[F]) {
+class FliptxoApp[F[_] : MonadThrow](console: cats.effect.std.Console[F]) {
   
   def run: F[Unit] = console.println("name?") 
               >> console.readLine

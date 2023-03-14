@@ -23,7 +23,7 @@ trait SimpleConsole[F[_]]{
 
 trait CalicoConsole[F[_]] {
 
-  def mkResource(app: SimpleConsole[F] => F[Unit]): Resource[F, HtmlElement[F]] 
+  def mkResource(app: std.Console[F] => F[Unit]): Resource[F, HtmlElement[F]] 
 
 }
 
@@ -41,10 +41,16 @@ object CalicoConsole {
 
     val console = stdIO.flatMap{
       case(in,out,disableIn,submitted) =>
-        IO{ new SimpleConsole[IO] {
-            def println(msg: String): IO[Unit] = out.update(_.appended(msg))
+        IO{ new std.Console[IO] {
 
-            def readLine: IO[String] =
+            // Members declared in cats.effect.std.Console
+            def error[A](a: A)(implicit S: cats.Show[A]): cats.effect.IO[Unit] = ???
+            def errorln[A](a: A)(implicit S: cats.Show[A]): cats.effect.IO[Unit] = ???
+            
+            def print[A](a: A)(implicit S: cats.Show[A]): cats.effect.IO[Unit] = ???
+            def println[A : cats.Show](msg: A): IO[Unit] = out.update(_.appended(msg.show))
+
+            def readLineWithCharset(charset: java.nio.charset.Charset): IO[String] =
                 disableIn.set(false) 
                   >> submitted.waitUntil(_ == true) 
                     >> in.getAndSet("")
@@ -53,7 +59,7 @@ object CalicoConsole {
         }.flatMap(c => IO(in,out,disableIn,submitted,c)).toResource
     }
 
-    def mkResource(app: SimpleConsole[IO] => IO[Unit]): Resource[IO, HtmlElement[IO]] = console.flatMap { 
+    def mkResource(app: std.Console[IO] => IO[Unit]): Resource[IO, HtmlElement[IO]] = console.flatMap { 
       case (in,out, disableIn, submitted, simpleconsole) =>
         app(simpleconsole).background.flatMap{ _ => 
           div(
